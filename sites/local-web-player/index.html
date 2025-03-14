@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+	<head>
+		<meta charset="UTF-8" />
+		<title>Web Player</title>
+
+		<!-- Video.js CSS -->
+		<link href="https://unpkg.com/video.js/dist/video-js.css" rel="stylesheet" />
+		<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap" rel="stylesheet" />
+
+		<style>
+			* {
+				box-sizing: border-box;
+				font-family: "Roboto", sans-serif;
+			}
+			body {
+				margin: 0;
+				height: 100vh;
+				background-color: #121212;
+				color: white;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+			}
+			.container {
+				display: grid;
+				grid-template-columns: 1fr 1fr;
+				width: 90%;
+				height: 80vh;
+				background-color: #1a1b22;
+				border-radius: 12px;
+				overflow: hidden;
+				box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+			}
+			.left-panel,
+			.right-panel {
+				padding: 15px;
+				overflow-y: auto;
+				background-color: #282828;
+				border-radius: 0 0 12px 12px;
+			}
+			h3 {
+				color: #22843a;
+				margin-bottom: 12px;
+				font-size: 18px;
+				font-weight: bold;
+			}
+			ul {
+				list-style: none;
+				padding: 0;
+			}
+			li {
+				padding: 10px;
+				background-color: #3f3f3f;
+				border-radius: 6px;
+				cursor: pointer;
+				transition: background-color 0.2s ease-in-out, transform 0.1s;
+			}
+			li:hover {
+				background-color: #575757;
+				transform: scale(1.02);
+			}
+			li.active {
+				background-color: #172b86;
+				font-weight: bold;
+				color: white;
+			}
+			.controls {
+				display: flex;
+				justify-content: space-between;
+				margin-top: 12px;
+			}
+			.controls button,
+			.controls label {
+				padding: 10px 14px;
+				background-color: #172b86;
+				border: none;
+				color: white;
+				cursor: pointer;
+				border-radius: 6px;
+				transition: background 0.3s, transform 0.1s;
+				font-size: 14px;
+			}
+			.controls button:hover,
+			.controls label:hover {
+				background-color: #0f1d5b;
+				transform: scale(1.05);
+			}
+			#videoFiles {
+				display: none;
+			}
+		</style>
+	</head>
+	<body>
+		<div class="container">
+			<div class="left-panel">
+				<video id="videoPlayer" class="video-js vjs-default-skin" controls></video>
+				<div class="controls">
+					<button onclick="previousVideo()">⏮ Anterior</button>
+					<label for="videoFiles">📂 Selecionar Vídeos</label>
+					<button onclick="nextVideo()">Próximo ⏭</button>
+				</div>
+				<input type="file" id="videoFiles" accept="video/*,.srt,.vtt" multiple />
+			</div>
+
+			<div class="right-panel">
+				<h3>▶️ Playlist</h3>
+				<ul id="playlist"></ul>
+			</div>
+		</div>
+
+		<!-- Video.js JS -->
+		<script src="https://unpkg.com/video.js/dist/video.js"></script>
+		<script>
+			const videoFilesInput = document.getElementById("videoFiles");
+			const playlistElement = document.getElementById("playlist");
+
+			let playlist = [];
+			let currentVideoIndex = 0;
+
+			const player = videojs("videoPlayer", {
+				controls: true,
+				autoplay: false,
+				preload: "auto",
+				fluid: true,
+			});
+
+			videoFilesInput.addEventListener("change", (e) => {
+				const files = Array.from(e.target.files);
+				playlist = files
+					.filter((f) => f.type.startsWith("video/"))
+					.map((video) => ({
+						name: video.name,
+						url: URL.createObjectURL(video),
+						subtitles: files
+							.filter(
+								(sub) =>
+									!sub.type.startsWith("video/") &&
+									sub.name.startsWith(video.name.split(".").slice(0, -1).join("."))
+							)
+							.map((sub) => ({
+								name: sub.name,
+								url: URL.createObjectURL(sub),
+								file: sub,
+							})),
+					}));
+
+				renderPlaylist();
+				if (playlist.length) loadVideo(0);
+			});
+
+			function convertSRTtoVTT(srtContent) {
+				const lines = srtContent.replace(/\r\n/g, "\n").split("\n");
+				let vttContent = "WEBVTT\n\n";
+				for (let line of lines) {
+					if (/^\d+$/.test(line)) continue;
+					if (line.includes("-->")) vttContent += line.replace(/,/g, ".") + "\n";
+					else if (line.trim()) vttContent += line + "\n";
+					else vttContent += "\n";
+				}
+				return vttContent.trim();
+			}
+
+			function loadVideo(index) {
+				if (index < 0 || index >= playlist.length) return;
+				currentVideoIndex = index;
+				const video = playlist[index];
+
+				player.src({ src: video.url, type: "video/mp4" });
+				player.load();
+				player.play();
+
+				player.remoteTextTracks().tracks_.forEach((track) => player.removeRemoteTextTrack(track));
+				loadAllSubtitles(video.subtitles);
+
+				renderPlaylist();
+			}
+
+			function renderPlaylist() {
+				playlistElement.innerHTML = "";
+				playlist.forEach((video, index) => {
+					const li = document.createElement("li");
+					li.textContent = video.name;
+					li.onclick = () => loadVideo(index);
+					if (index === currentVideoIndex) li.classList.add("active");
+					playlistElement.appendChild(li);
+				});
+			}
+
+			function loadAllSubtitles(subtitles) {
+				subtitles.forEach((subtitle) => {
+					addSubtitleToPlayer(subtitle);
+				});
+			}
+
+			function addSubtitleToPlayer(subtitle) {
+				const fileExtension = subtitle.name.split(".").pop().toLowerCase();
+				const lang = subtitle.name.includes(".pt.") ? "pt" : "en";
+				const label = subtitle.name.includes(".pt.") ? "Português" : "Inglês";
+
+				if (fileExtension === "vtt") {
+					player.addRemoteTextTrack(
+						{
+							kind: "subtitles",
+							label: label,
+							src: subtitle.url,
+							srclang: lang,
+							default: lang === "pt",
+						},
+						false
+					);
+				} else if (fileExtension === "srt") {
+					const reader = new FileReader();
+					reader.onload = function (event) {
+						const vttContent = convertSRTtoVTT(event.target.result);
+						const vttBlob = new Blob([vttContent], { type: "text/vtt" });
+						const vttUrl = URL.createObjectURL(vttBlob);
+						player.addRemoteTextTrack(
+							{
+								kind: "subtitles",
+								label: label,
+								src: vttUrl,
+								srclang: lang,
+								default: lang === "pt",
+							},
+							false
+						);
+					};
+					reader.readAsText(subtitle.file);
+				}
+			}
+
+			function nextVideo() {
+				loadVideo((currentVideoIndex + 1) % playlist.length);
+			}
+			function previousVideo() {
+				loadVideo((currentVideoIndex - 1 + playlist.length) % playlist.length);
+			}
+		</script>
+	</body>
+</html>

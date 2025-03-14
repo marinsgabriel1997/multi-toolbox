@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Renomear Episódios</title>
+		<link rel="stylesheet" href="style.css" />
+	</head>
+	<body>
+		<main>
+			<header>
+				<h1>Renomear Episódios</h1>
+				<span class="explanation">
+					Essa ferramenta automatiza a renomeação dos episódios com base na série, temporada e número inicial
+					informados.
+				</span>
+			</header>
+
+			<div class="form-group">
+				<label class="file-input-label" for="filePicker">Selecione os Episódios:</label>
+				<span class="explanation">
+					Escolha os arquivos de vídeo que deseja renomear. Cada arquivo corresponderá a um episódio.
+				</span>
+				<div class="file-input-wrapper">
+					<button type="button" class="file-input-button">Escolher Arquivos</button>
+					<input type="file" id="filePicker" multiple accept="video/*" />
+					<span id="fileCount" class="file-count"></span>
+				</div>
+			</div>
+
+			<section class="input-section">
+				<div class="form-group">
+					<label class="file-input-label" for="folderPicker">Nome da Série (Pasta):</label>
+					<span class="explanation">
+						Informe manualmente o nome da série ou selecione uma pasta para preencher automaticamente.
+					</span>
+					<div class="file-input-wrapper">
+						<button type="button" class="file-input-button">Escolher Pasta</button>
+						<input type="file" id="folderPicker" webkitdirectory directory />
+					</div>
+					<input type="text" id="seriesName" placeholder="Exemplo: O Justiceiro" />
+				</div>
+
+				<div class="form-group">
+					<label for="season">Número da Temporada:</label>
+					<span class="explanation">
+						Selecione a temporada dos episódios. Isso ajudará a criar um nome com a identificação correta.
+					</span>
+					<input type="number" id="season" value="1" min="1" />
+				</div>
+
+				<div class="form-group">
+					<label for="startEpisode">Episódio inicial para renomeação:</label>
+					<span class="explanation">
+						Informe o número do episódio a partir do qual a renomeação deve começar. Os arquivos serão renomeados de
+						forma incremental.
+					</span>
+					<input type="number" id="startEpisode" value="1" min="1" />
+				</div>
+			</section>
+
+			<section class="preview-section">
+				<span class="explanation">
+					A tabela abaixo mostra os nomes originais e os novos nomes gerados. A área de texto exibe os comandos
+					PowerShell que podem ser executados para renomear os arquivos.
+					<br /><br />
+					Abra o terminal do PowerShell, navegue até a pasta onde os arquivos estão e cole os comandos para renomear os
+					arquivos.
+				</span>
+				<table id="previewTable" style="display: none">
+					<thead>
+						<tr>
+							<th>Nome Original</th>
+							<th>Novo Nome</th>
+						</tr>
+					</thead>
+					<tbody></tbody>
+				</table>
+				<textarea id="previewCommand" style="width: 100%" rows="25"></textarea>
+			</section>
+		</main>
+
+		<script src="script.js"></script>
+	</body>
+</html>
